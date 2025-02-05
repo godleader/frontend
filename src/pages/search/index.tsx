@@ -28,15 +28,13 @@ export const QueryInfoPage = () => {
   useEffect(() => {
     const fetchCountryOptions = async () => {
       try {
-        const response = await fetch('country-flag.json');
+        const response = await fetch('/country-flag.json'); // Ensure this file exists in public folder
         if (!response.ok) {
           throw new Error('网络响应错误');
         }
         const data = await response.json();
-        // Map each country object to the structure required for the Select options.
-        // Here we use `code` as the value and `country` as the label.
         setCountryOptions(
-          data.map((item: { code: string; country: string; flag: string }) => ({
+          data.map((item: { code: string; country: string }) => ({
             value: item.code,
             label: item.country,
           }))
@@ -70,7 +68,6 @@ export const QueryInfoPage = () => {
       title: '国家/地区',
       dataIndex: 'country',
       key: 'country',
-      // Look up the country label using the country code stored in the record
       render: (countryCode: string) => {
         const found = countryOptions.find(
           (option) => option.value === countryCode
@@ -81,11 +78,17 @@ export const QueryInfoPage = () => {
   ];
 
   const handleSearch = async () => {
+    if (!keyword.trim()) {
+      message.warning('请输入搜索关键词');
+      return;
+    }
+
     setLoading(true);
     try {
       const token = sessionStorage.getItem('token');
       if (!token) {
         message.error('未检测到登录信息，请重新登录。');
+        setLoading(false);
         return;
       }
 
@@ -101,6 +104,8 @@ export const QueryInfoPage = () => {
       if (!response.ok) {
         if (response.status === 401) {
           message.error('您的登录已过期，请重新登录。');
+        } else if (response.status === 405) {
+          message.error('请求方法错误，请联系技术支持。');
         } else {
           message.error('搜索用户失败，请稍后重试。');
         }
@@ -126,7 +131,6 @@ export const QueryInfoPage = () => {
   return (
     <div style={{ padding: '20px' }}>
       <Card title="用户搜索">
-        {/* Use the Grid system for a responsive layout */}
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={8} md={6}>
             <Select
@@ -175,7 +179,7 @@ export const QueryInfoPage = () => {
           </Col>
         </Row>
         <Divider />
-        <Table dataSource={dataSource} columns={columns} loading={loading} />
+        <Table dataSource={dataSource} columns={columns} loading={loading} rowKey="id" />
       </Card>
     </div>
   );
