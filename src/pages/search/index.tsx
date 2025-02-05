@@ -89,7 +89,7 @@ export const QueryInfoPage = () => {
         return;
       }
 
-      const response = await fetch('/api/users/search', {
+      const response = await fetch('/search/sheet', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
