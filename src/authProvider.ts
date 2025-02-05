@@ -2,40 +2,55 @@ import { AuthProvider } from "@refinedev/core";
 
 export const TOKEN_KEY = "zeal-auth";
 
-const backend = import.meta.env.VITE_BACKEND_SERVER
+const backend = import.meta.env.VITE_BACKEND_SERVER;
 
 export const authProvider: AuthProvider = {
-   login: async ({ email, password }) => {
+  login: async ({ email, password }) => {
+    try {
       const response = await fetch(`${backend}/api/users/login`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
       });
-   if (response.ok) {
-      const data = await response.json();
-      // Use sessionStorage instead of localStorage
-      sessionStorage.setItem("token", data.token);
-      return {
-        success: true,
-        redirectTo: "/",
-      };
-    } else {
+
+      if (response.ok) {
+        const data = await response.json();
+        sessionStorage.setItem(TOKEN_KEY, data.token);
+        return {
+          success: true,
+          redirectTo: "/search",
+        };
+      } else {
+        const errorData = await response.json();
+        return {
+          success: false,
+          error: {
+            message: errorData.message || "Login failed",
+            name: "InvalidCredentials",
+          },
+        };
+      }
+    } catch (error) {
       return {
         success: false,
-        error: { message: "Login failed", name: "InvalidCredentials" },
+        error: {
+          message: "Network error. Please try again.",
+          name: "NetworkError",
+        },
       };
     }
   },
+
   logout: async () => {
-    sessionStorage.removeItem("token");
+    sessionStorage.removeItem(TOKEN_KEY);
     return {
       success: true,
       redirectTo: "/login",
     };
   },
-   // Check if the user is authenticated
-   check: async () => {
-    const token = sessionStorage.getItem("token");
+
+  check: async () => {
+    const token = sessionStorage.getItem(TOKEN_KEY);
     if (token) {
       return { authenticated: true };
     }
@@ -50,114 +65,162 @@ export const authProvider: AuthProvider = {
     };
   },
 
-   getPermissions: async () => null,
-   getIdentity: async () => {
-      const token = sessionStorage.getItem("token");
-      if (token) {
-         const base64Url = token.split(".")[1];
-         const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
-         const jsonPayload = decodeURIComponent(
-            atob(base64)
-               .split("")
-               .map(function (c) {
-                  return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
-               })
-               .join("")
-         );
+  getPermissions: async () => null,
 
-         const { email, username, role } = JSON.parse(jsonPayload);
+  getIdentity: async () => {
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    if (token) {
+      try {
+        const base64Url = token.split(".")[1];
+        const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+        const jsonPayload = decodeURIComponent(
+          atob(base64)
+            .split("")
+            .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+            .join("")
+        );
 
-         return {
-            id: 1,
-            name: username,
-            email: email,
-            role: role,
-            avatar: "https://i.pravatar.cc/300",
-         };
+        const { email, username, role, walletBalance } = JSON.parse(jsonPayload);
+
+        return {
+          id: 1,
+          name: username,
+          email: email,
+          role: role,
+          walletBalance: walletBalance,
+          avatar: "https://i.pravatar.cc/300",
+        };
+      } catch (error) {
+        console.error("Failed to decode token:", error);
+        return null;
       }
-      return null;
-   },
-   onError: async (error) => {
-      if (error.status === 401 || error.status === 403) {
-         return {
-            logout: true,
-            redirectTo: "/login",
-            error,
-         };
+    }
+    return null;
+  },
+
+  onError: async (error) => {
+    if (error.status === 401 || error.status === 403) {
+      return {
+        logout: true,
+        redirectTo: "/login",
+        error,
+      };
+    }
+    console.error(error);
+    return { error };
+  },
+
+  updatePassword: async ({ password, confirmPassword, token }) => {
+    try {
+      const response = await fetch(`${backend}/api/users/update-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ password, confirmPassword }),
+      });
+
+      if (response.ok) {
+        return {
+          success: true,
+          redirectTo: "/login",
+        };
+      } else {
+        const errorData = await response.json();
+        return {
+          success: false,
+          error: {
+            message: errorData.message || "Password update failed",
+            name: "PasswordUpdateError",
+          },
+        };
       }
-      console.error(error);
-      return { error };
-   },
-   updatePassword: async ({ password, confirmPassword, token }) => {
-      //update the user's password here
-
-      // if the password was updated successfully
+    } catch (error) {
       return {
-         success: true,
-         redirectTo: "/login",
+        success: false,
+        error: {
+          message: "Network error. Please try again.",
+          name: "NetworkError",
+        },
       };
+    }
+  },
 
-      // if the password update failed
+  forgotPassword: async ({ email }) => {
+    try {
+      const response = await fetch(`${backend}/api/users/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (response.ok) {
+        return {
+          success: true,
+          redirectTo: "/login",
+        };
+      } else {
+        const errorData = await response.json();
+        return {
+          success: false,
+          error: {
+            message: errorData.message || "Email address does not exist",
+            name: "ForgotPasswordError",
+          },
+        };
+      }
+    } catch (error) {
       return {
-         success: false,
-         error: {
-            message: "Password update failed",
-            name: "Password update failed",
-         },
+        success: false,
+        error: {
+          message: "Network error. Please try again.",
+          name: "NetworkError",
+        },
       };
-   },
-   forgotPassword: async ({ email }) => {
-      // send password reset link to the user's email address here
+    }
+  },
 
-      // if request is successful
-      return {
-         success: true,
-         redirectTo: "/login",
-      };
-
-      // if request is not successful
-      return {
-         success: false,
-         error: {
-            name: "Forgot Password Error",
-            message: "Email address does not exist",
-         },
-      };
-   },
-
-
-     // Registration: call the backend /api/users/register endpoint
-     register: async ({ username, email, password, role }) => {
+  register: async ({ username, email, password, role }) => {
+    try {
       const response = await fetch(`${backend}/api/users/register`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, email, password, role }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, email, password, role }),
       });
 
       const data = await response.json();
 
       if (response.status === 201) {
-          // Successful registration redirects to login
-          return {
-              success: true,
-              redirectTo: "/login",
-          };
+        return {
+          success: true,
+          redirectTo: "/login",
+        };
       } else if (response.status === 400) {
-          return {
-              success: false,
-              error: {
-                  name: "Register Error",
-                  message: data.message || "User already exists",
-              },
-          };
+        return {
+          success: false,
+          error: {
+            name: "RegisterError",
+            message: data.message || "User already exists",
+          },
+        };
       } else {
-          return {
-              success: false,
-              error: {
-                  name: "Register Error",
-                  message: data.message || "An error occurred",
-              },
-          };
+        return {
+          success: false,
+          error: {
+            name: "RegisterError",
+            message: data.message || "An error occurred",
+          },
+        };
       }
+    } catch (error) {
+      return {
+        success: false,
+        error: {
+          name: "RegisterError",
+          message: "Network error. Please try again.",
+        },
+      };
+    }
   },
 };

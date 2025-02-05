@@ -42,7 +42,7 @@ export const ThemedHeaderV2: React.FC<RefineThemedLayoutV2HeaderProps> = ({
   const [loginHistory, setLoginHistory] = useState([]);
   const [walletBalance, setWalletBalance] = useState([]);
   const [transactions, setTransactions] = useState([]);
-  const { balance } = useContext(WalletContext);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -80,7 +80,7 @@ export const ThemedHeaderV2: React.FC<RefineThemedLayoutV2HeaderProps> = ({
   // Dynamically update menu items with fetched data
   const menuItems = [
     { key: "username", label: `Username: ${user?.name || "N/A"}` },
-    { key: "balance", label: `Balance: ${balance}` },
+    { key: "balance", label: `Balance: ${walletBalance}` },
     { key: "history", label: "History Search" },
   ];
 

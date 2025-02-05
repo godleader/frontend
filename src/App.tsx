@@ -33,7 +33,7 @@ import {
   AccountList,
   AccountShow,
 } from "./pages/accounts";
-import { QueryInfoPage } from "./pages/search";
+import { SearchPage } from "./pages/search";
 import { WalletProvider } from "./contexts/wallet-context";
 
 import { WalletPage } from "./pages/wallet";
@@ -91,7 +91,7 @@ const App: React.FC = () => {
           <AntdApp>
             <DevtoolsProvider>
               <Refine
-                dataProvider={dataProvider(backend)}
+                dataProvider={dataProvider("https://backend-lovat-iota.vercel.app")}
                 notificationProvider={useNotificationProvider}
                 routerProvider={routerBindings}
                 authProvider={authProvider}
@@ -138,7 +138,7 @@ const App: React.FC = () => {
                       <Route path="show/:id" element={<AccountShow />} />
                       <Route path="edit/:id" element={<AccountEdit />} />
                     </Route>
-                    <Route path="search" element={<QueryInfoPage />} />
+                    <Route path="search" element={<SearchPage />} />
                 
                       <Route path="wallet" element={
                         <WalletProvider>
