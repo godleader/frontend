@@ -5,12 +5,13 @@ import {
   Button,
   Select,
   message,
-  Space,
   Card,
   Divider,
   Row,
   Col,
 } from 'antd';
+import { useApiUrl, useNavigation, useTranslate } from "@refinedev/core";
+
 
 const { Option } = Select;
 
@@ -23,14 +24,17 @@ export const QueryInfoPage = () => {
   const [countryOptions, setCountryOptions] = useState<
     { value: string; label: string }[]
   >([]);
+  const apiUrl = useApiUrl();
+  const { push } = useNavigation();
+  const translate = useTranslate();
 
-  // Load country list from a local country-flag.json file placed in the public folder
+  // Load country list from a local country-flag.json file
   useEffect(() => {
     const fetchCountryOptions = async () => {
       try {
-        const response = await fetch('/country-flag.json'); // Ensure this file exists in public folder
+        const response = await fetch('/country-flag.json');
         if (!response.ok) {
-          throw new Error('网络响应错误');
+          throw new Error(translate('common.errors.network', 'Network response was not ok'));
         }
         const data = await response.json();
         setCountryOptions(
@@ -40,101 +44,110 @@ export const QueryInfoPage = () => {
           }))
         );
       } catch (error) {
-        console.error('获取国家/地区列表出错:', error);
-        message.error('获取国家/地区列表失败，请稍后重试。');
+        console.error('Error fetching country list:', error);
+        message.error(translate('common.errors.fetchCountry', 'Failed to fetch country list, please try again later.'));
       }
     };
 
     fetchCountryOptions();
-  }, []);
+  }, [translate]);
 
-  const columns = [
-    {
-      title: '姓名',
-      dataIndex: 'name',
-      key: 'name',
-    },
-    {
-      title: '身份证号',
-      dataIndex: 'idCard',
-      key: 'idCard',
-    },
-    {
-      title: '电话号码',
-      dataIndex: 'phone',
-      key: 'phone',
-    },
-    {
-      title: '国家/地区',
-      dataIndex: 'country',
-      key: 'country',
-      render: (countryCode: string) => {
-        const found = countryOptions.find(
-          (option) => option.value === countryCode
-        );
-        return found ? found.label : countryCode;
-      },
-    },
-  ];
+
+    const columns = [
+        {
+            title: translate('fields.name', 'Name'),
+            dataIndex: 'name',
+            key: 'name',
+        },
+        {
+            title: translate('fields.idCard', 'ID Card Number'),
+            dataIndex: 'idCard',
+            key: 'idCard',
+        },
+        {
+            title: translate('fields.phone', 'Phone Number'),
+            dataIndex: 'phone',
+            key: 'phone',
+        },
+        {
+          title: translate('fields.country', 'Country/Region'),
+          dataIndex: 'country',
+          key: 'country',
+          render: (countryCode: string) => {
+            const found = countryOptions.find((option) => option.value === countryCode);
+            return found ? found.label : countryCode;
+          },
+        },
+    ];
+
+
 
   const handleSearch = async () => {
     if (!keyword.trim()) {
-      message.warning('请输入搜索关键词');
+      message.warning(translate('common.errors.emptyKeyword', 'Please enter a search keyword'));
       return;
     }
 
     setLoading(true);
     try {
-      const token = sessionStorage.getItem('token');
-      if (!token) {
-        message.error('未检测到登录信息，请重新登录。');
-        setLoading(false);
-        return;
-      }
 
-      const response = await fetch('/search/sheets', {
+      const response = await fetch(`${apiUrl}/search/sheets`, {  // Use apiUrl
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${sessionStorage.getItem('token')}`, // Or use refine's auth helpers
         },
         body: JSON.stringify({ keyword, country, searchType }),
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          message.error('您的登录已过期，请重新登录。');
-        } else if (response.status === 405) {
-          message.error('请求方法错误，请联系技术支持。');
-        } else {
-          message.error('搜索用户失败，请稍后重试。');
+        switch (response.status) {
+          case 401:
+            message.error(translate('common.errors.unauthorized', 'Your session has expired, please log in again.'));
+            // Optionally redirect to login page here using refine's navigation
+             push("/login");  // Redirect to the login route
+            break;
+          case 403:
+            message.error(translate('common.errors.forbidden', 'You do not have permission to access this resource.'));
+            break;
+          case 404:
+            message.error(translate('common.errors.notFound', 'Resource not found.'));
+            break;
+          case 405:
+            message.error(translate('common.errors.methodNotAllowed', "Method Not Allowed. Check your API endpoint's allowed methods."));
+            break;
+          default:
+            message.error(translate('common.errors.searchFailed', {status: response.status}, `Search failed, please try again later. (Status code: ${response.status})`));
         }
-        throw new Error(`HTTP 错误: ${response.status}`);
+        throw new Error(`HTTP error! Status: ${response.status}`); // Still throw for the catch block
       }
 
       const data = await response.json();
       setDataSource(data);
-    } catch (error: any) {
-      console.error('搜索用户出错:', error);
-      message.error('搜索用户失败，请稍后重试。');
+      message.success(translate('common.messages.searchSuccess', 'Search successful!'));
+
+    } catch (error) {
+      console.error("An error occurred during the search:", error);
+      message.error(translate('common.errors.searchError', 'An error occurred during the search, please try again later.'));
     } finally {
       setLoading(false);
     }
   };
 
+
   const searchTypeOptions = [
-    { value: 'name', label: '姓名' },
-    { value: 'idCard', label: '身份证号' },
-    { value: 'phone', label: '电话号码' },
+    { value: 'name', label: translate('fields.name', 'Name') },
+    { value: 'idCard', label: translate('fields.idCard', 'ID Card Number') },
+    { value: 'phone', label: translate('fields.phone', 'Phone Number') },
   ];
 
   return (
     <div style={{ padding: '20px' }}>
-      <Card title="用户搜索">
+      <Card title={translate('pages.userSearch.title', 'User Search')}>
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={8} md={6}>
             <Select
-              placeholder="请选择国家/地区"
+              placeholder={translate('placeholders.selectCountry', "Select Country/Region")}
               value={country}
               onChange={(value) => setCountry(value)}
               style={{ width: '100%' }}
@@ -148,7 +161,7 @@ export const QueryInfoPage = () => {
           </Col>
           <Col xs={24} sm={8} md={6}>
             <Select
-              placeholder="请选择搜索类型"
+              placeholder={translate('placeholders.selectSearchType', "Select Search Type")}
               value={searchType}
               onChange={(value) => setSearchType(value)}
               style={{ width: '100%' }}
@@ -162,7 +175,7 @@ export const QueryInfoPage = () => {
           </Col>
           <Col xs={24} sm={8} md={12}>
             <Input.Search
-              placeholder="请输入搜索关键词"
+              placeholder={translate('placeholders.enterKeyword', "Enter search keyword")}
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               onSearch={handleSearch}
@@ -171,13 +184,7 @@ export const QueryInfoPage = () => {
             />
           </Col>
         </Row>
-        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-          <Col xs={24}>
-            <Button type="primary" onClick={handleSearch} loading={loading} block>
-              搜索
-            </Button>
-          </Col>
-        </Row>
+
         <Divider />
         <Table dataSource={dataSource} columns={columns} loading={loading} rowKey="id" />
       </Card>
