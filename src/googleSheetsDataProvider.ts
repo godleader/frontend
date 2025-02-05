@@ -1,179 +1,328 @@
-import {
-  BaseRecord,
-  DataProvider,
-  GetListParams,
-  GetListResponse,
-  CrudFilters,
-} from "@refinedev/core";
-import { google, Auth } from "googleapis";
+// dataProvider.ts
+import { BaseKey, BaseRecord, CustomParams, CustomResponse, DataProvider, GetListParams, GetOneParams } from "@refinedev/core";
+import { google } from "googleapis";
+import { dataProvider } from "./rest-data-provider";
 
-// ==================================================================
-// 1. Environment Setup & Google API Authorization
-// ==================================================================
+// Replace with your Google Sheets API credentials and spreadsheet ID
+const SPREADSHEET_ID = "YOUR_SPREADSHEET_ID"; // IMPORTANT: Replace this
+const CLIENT_EMAIL = "your-service-account-email@your-project.iam.gserviceaccount.com"; // IMPORTANT
+const PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY_HERE\n-----END PRIVATE KEY-----\n`;  // IMPORTANT:  Store this securely!
 
-// Check that the base64-encoded credentials are provided.
-const GOOGLE_CREDENTIALS_BASE64 = process.env.GOOGLE_CREDENTIALS_BASE64;
-if (!GOOGLE_CREDENTIALS_BASE64) {
-  throw new Error("GOOGLE_CREDENTIALS_BASE64 environment variable is not defined");
-}
+// Replace with your sheet name (e.g., 'Sheet1')
+const DEFAULT_SHEET_NAME = "Sheet1";
 
-let GOOGLE_CREDENTIALS_JSON: any;
-try {
-  GOOGLE_CREDENTIALS_JSON = JSON.parse(
-    Buffer.from(GOOGLE_CREDENTIALS_BASE64, "base64").toString("utf-8")
+// Function to get the Google Sheets API client
+const getSheetsClient = async () => {
+  const jwtClient = new google.auth.JWT(
+    CLIENT_EMAIL,
+    undefined,
+    PRIVATE_KEY.replace(/\\n/g, "\n"), // Important: Replace escaped newlines
+    ["https://www.googleapis.com/auth/spreadsheets"]
   );
-} catch (error) {
-  console.error("Error parsing GOOGLE_CREDENTIALS_BASE64:", error);
-  throw new Error("Invalid GOOGLE_CREDENTIALS_BASE64 environment variable");
-}
 
-/**
- * Authorizes the Google API client using the provided credentials.
- */
-async function authorize(): Promise<
-  Auth.OAuth2Client | Auth.JWT | Auth.Compute | Auth.UserRefreshClient
-> {
-  try {
-    const auth = new google.auth.GoogleAuth({
-      credentials: GOOGLE_CREDENTIALS_JSON,
-      scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
+  await jwtClient.authorize();
+  return google.sheets({ version: "v4", auth: jwtClient });
+};
+
+const googleProvider: DataProvider = {
+  getList: async <TData extends BaseRecord = BaseRecord>({ resource, pagination, meta }: GetListParams) => {
+    const sheets = await getSheetsClient();
+    const sheetName = meta?.sheetName || DEFAULT_SHEET_NAME; // Use meta if provided
+    const range = `${sheetName}!A:Z`; // Get all columns from A to Z
+
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range,
     });
-    return await auth.getClient() as Auth.OAuth2Client | Auth.JWT | Auth.Compute | Auth.UserRefreshClient;
-  } catch (error) {
-    console.error("Google Sheets Authorization Error:", error);
-    throw new Error("Failed to authorize Google Sheets API");
-  }
-}
 
-/**
- * Retrieves data (rows) from a Google Spreadsheet.
- * Adjust `spreadsheetId` and `range` to match your Google Sheet.
- */
-async function getSheetData(
-  auth: Auth.OAuth2Client | Auth.JWT | any
-): Promise<any[]> {
-  try {
-    const sheets = google.sheets({ version: "v4", auth });
-    // TODO: Replace with your actual Spreadsheet ID.
-    const spreadsheetId = "YOUR_SPREADSHEET_ID_HERE";
-    // TODO: Replace with your desired range.
-    const range = "Sheet1!A2:C"; // Assumes headers are in row 1.
-    
-    const res = await sheets.spreadsheets.values.get({ spreadsheetId, range });
-    return res.data.values || [];
-  } catch (error) {
-    console.error("Error fetching Google Sheet data:", error);
-    throw new Error("Failed to retrieve data from Google Sheets");
-  }
-}
-
-// ==================================================================
-// 2. Utility: Extract Search Parameters from Filters
-// ==================================================================
-
-/**
- * Extracts the search query and search type from the Refine filters.
- *
- * Expected filters:
- *  - A filter with `field: "q"` contains the search query.
- *  - A filter with `field: "searchType"` contains the type ("name", "phone", or "idcard").
- *
- * 如果没有提供搜索类型，默认使用 "name"。
- */
-function extractSearchParams(filters: CrudFilters): { query: string; searchType: string } {
-  let query = "";
-  let searchType = "name"; // Default search type
-
-  if (Array.isArray(filters)) {
-    for (const filter of filters) {
-      if (filter.operator === "eq" && filter.field === "q" && typeof filter.value === "string") {
-        query = filter.value.toLowerCase();
-      }
-      if (filter.operator === "eq" && filter.field === "searchType" && typeof filter.value === "string") {
-        searchType = filter.value.toLowerCase();
-      }
+    const values = response.data.values;
+    if (!values || values.length === 0) {
+      return { data: [], total: 0 };
     }
-  }
-  return { query, searchType };
-}
 
-// ==================================================================
-// 3. Custom DataProvider Implementation
-// ==================================================================
+    // Assuming the first row is the header
+    const headers = values[0];
+    const data = values.slice(1).map((row) => {
+      const rowData: Record<string, any> = {};
+      headers.forEach((header, index) => {
+        rowData[header] = row[index] || null; // Handle missing values
+      });
 
-// Map the search type to a column index in the spreadsheet.
-const columnMapping: { [key: string]: number } = {
-  name: 0,
-  phone: 1,
-  idcard: 2,
-};
+      // Add a unique 'id' field. This is crucial for Refine.
+      rowData.id = rowData.id || row.join('-'); // Use a combination of columns if no 'id' exists, or you can improve this logic
+      return rowData;
+    });
+    const { current = 1, pageSize = 10 } = pagination ?? {};
+    const start = (current - 1) * pageSize;
+    const end = start + pageSize;
+    return {
+      data: data.slice(start, end) as TData[],
+      total: data.length, // Important for pagination
+    };
+  },
 
-const googleSheetsDataProvider: DataProvider = {
-  /**
-   * Implements the `getList` method.
-   *
-   * It fetches rows from Google Sheets, maps them to an object shape, and then:
-   *  - Applies filtering based on the search query and search type.
-   *  - Applies pagination.
-   */
-  getList: async <TData extends BaseRecord = BaseRecord>(
-    params: GetListParams
-  ): Promise<GetListResponse<TData>> => {
-    try {
-      // 1. Authorize and fetch rows from Google Sheets.
-      const auth = await authorize();
-      const rows = await getSheetData(auth);
+  getOne: async <TData extends BaseRecord = BaseRecord>({ resource, id, meta }: GetOneParams) => {
+    const sheetName = meta?.sheetName || DEFAULT_SHEET_NAME;
+    const sheets = await getSheetsClient();
+    const range = `${sheetName}!A:Z`;
+    const { data: { values } } = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range,
+    });
 
-      // 2. Map the raw rows to data objects.
-      // Here we assume:
-      //   - id is set to the row number (starting at 1)
-      //   - Column A (index 0): name, Column B (index 1): phone, Column C (index 2): idcard.
-      let data = rows.map((row, index) => ({
-        id: index + 1,
-        name: row[0] || "",
-        phone: row[1] || "",
-        idcard: row[2] || "",
-      }));
+    if (!values) {
+      throw new Error("Sheet data is undefined.");
+    }
 
-      // 3. Extract search parameters from the filters.
-      const { query, searchType } = extractSearchParams(params.filters || []);
-      if (query) {
-        // Find the corresponding column index for the search type.
-        const colIndex = columnMapping[searchType];
-        if (colIndex === undefined) {
-          throw new Error(`Unsupported search type: ${searchType}`);
+    const headers = values[0];
+    const rows = values.slice(1);
+    const row = rows.find(row => (row[0] || row.join("-")) === id); //assumes ID is first, or use same logic
+
+    if (!row) {
+      throw new Error(`Record with id ${id} not found`);
+    }
+
+    const record: Record<string, any> = {};
+    headers.forEach((header, index) => {
+      record[header] = row[index] ?? null;
+    });
+    record.id = id; // Ensure 'id' field.
+    return { data: record as TData };
+  },
+  create: async <TData extends BaseRecord = BaseRecord, TVariables = {}>({ resource, variables, meta }: { resource: string; variables: TVariables; meta?: any; }) => {
+    const sheets = await getSheetsClient();
+    const sheetName = meta?.sheetName || DEFAULT_SHEET_NAME;
+
+    // Get existing headers to ensure consistent structure
+    const { data: { values } } = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${sheetName}!A1:Z1`, // Get only the first row (headers)
+    });
+
+    const existingHeaders = values ? values[0] : [];
+    const newRow: any[] = [];
+
+    // Map variables to the correct column based on existing headers
+    existingHeaders.forEach((header: string) => {
+      newRow.push((variables as Record<string, any>)?.[header] ?? null); // Use null for missing values
+    });
+
+    // Add any new headers (columns) from variables that aren't already in the sheet
+    if (variables) {
+      for (const key in variables) {
+        if (variables.hasOwnProperty(key) && !existingHeaders.includes(key)) {
+          existingHeaders.push(key);
+          newRow.push(variables[key]);
         }
-        // Filter the data based on the specified column.
-        data = data.filter((record) => {
-          const value = (record as any)[searchType] || "";
-          return value.toLowerCase().includes(query);
-        });
+      }
+    }
+
+    // Append the new row
+    const appendResponse = await sheets.spreadsheets.values.append({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${sheetName}!A:Z`,
+      valueInputOption: "USER_ENTERED", // Important: How the data is interpreted
+      requestBody: {
+        values: [newRow],
+      },
+    });
+    // Update the headers if new columns were added
+    if (values && existingHeaders.length > values[0].length) {
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${sheetName}!A1:Z1`, // Update the first row (headers)
+        valueInputOption: "USER_ENTERED",
+        requestBody: {
+          values: [existingHeaders],
+        },
+      });
+    }
+
+    const updatedRange = appendResponse.data.updates?.updatedRange;
+
+    if (!updatedRange) {
+      throw new Error('Append failed');
+    }
+
+    // Extract ID (assuming it's in the first column)
+    const match = updatedRange.match(/!A(\d+)/);
+    const id = match ? match[1] : null;
+    // Or construct id like getList.
+    return { data: { ...variables, id } as any };
+
+  },
+
+  update: async <TData extends BaseRecord = BaseRecord, TVariables = {}>({ resource, id, variables, meta }: { resource: string; id: BaseKey; variables: TVariables; meta?: any; }) => {
+    const sheets = await getSheetsClient();
+    const sheetName = meta?.sheetName || DEFAULT_SHEET_NAME;
+
+    //1.  Get Headers
+    const { data: { values: headerValues } } = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${sheetName}!A1:Z1`
+    });
+
+    const headers = headerValues ? headerValues[0] : [];
+
+    //2.  Find the row index
+    const { data: { values } } = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${sheetName}!A:Z`,
+    });
+
+    if (!values) { throw new Error("No data found in sheet."); }
+
+    const rowIndex = values.findIndex(row => (row[0] || row.join("-")) === id) + 1; // +1 because Sheets API is 1-indexed
+
+    if (rowIndex === 0) { // -1 + 1 = 0 if not found
+      throw new Error(`Record with id ${id} not found`);
+    }
+    const updatedRow: any[] = [];
+
+    // Map variables to the correct column based on existing headers
+    headers.forEach(header => {
+      updatedRow.push((variables as Record<string, any>)?.[header] ?? null);
+    });
+
+
+    //3. Update values
+    const updateResponse = await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${sheetName}!A${rowIndex}:Z${rowIndex}`, // Update the specific row
+      valueInputOption: 'USER_ENTERED',
+      requestBody: {
+        values: [updatedRow],
+      },
+    });
+    return { data: { ...variables, id } as any };
+
+  },
+
+  deleteOne: async ({ resource, id, variables, meta }: { resource: string; id: BaseKey; variables?: any; meta?: any; }) => {
+    const sheets = await getSheetsClient();
+    const sheetName = meta?.sheetName || DEFAULT_SHEET_NAME;
+
+    // Find the row index
+    const { data: { values } } = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${sheetName}!A:Z`, // Check all rows and columns
+    });
+
+    if (!values) { throw new Error('Sheet data is undefined.'); }
+
+    const rowIndex = values.findIndex(row => (row[0] || row.join("-")) === id) + 1; // +1 for 1-based indexing
+
+    if (rowIndex === 0) {
+      throw new Error(`Record with id ${id} not found`);
+    }
+
+    // To delete a row, we need to use the spreadsheets.batchUpdate method
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: {
+        requests: [{
+          deleteDimension: {
+            range: {
+              sheetId: 0, // Assuming you want to delete from the first sheet, often ID is 0
+              dimension: "ROWS",
+              startIndex: rowIndex - 1, //  API is zero-indexed for startIndex/endIndex
+              endIndex: rowIndex, //  Delete only the one row
+            }
+          }
+        }],
+      },
+    });
+
+    return { data: { id } as any }; // Return the deleted ID
+  },
+  getMany: async ({ resource, ids, meta }) => {
+    const sheets = await getSheetsClient();
+    const sheetName = meta?.sheetName || DEFAULT_SHEET_NAME;
+
+    // Get all data from the sheet
+    const { data: { values } } = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${sheetName}!A:Z`,
+    });
+
+    if (!values) {
+      return { data: [] }; // Return an empty array if no data is found
+    }
+
+    const headers = values[0];
+    const rows = values.slice(1);
+
+    const records = ids.map(id => {
+      const row = rows.find(row => (row[0] || row.join('-')) === id);
+      if (!row) return null; //or throw error.
+
+      const record: Record<string, any> = {};
+      headers.forEach((header, index) => {
+        record[header] = row[index] ?? null;
+      });
+      record.id = id; // Ensure the 'id' field.
+      return record;
+
+    }).filter(Boolean); // Remove nulls (records not found)
+
+    return { data: records as any[] };
+  },
+  custom: async <TData extends BaseRecord = BaseRecord, TQuery = unknown, TPayload = unknown>({ url, method, payload, query, headers, meta }: CustomParams<TQuery, TPayload>): Promise<CustomResponse<TData>> => {
+    const sheets = await getSheetsClient();
+    const sheetName = meta?.sheetName || DEFAULT_SHEET_NAME;
+
+    if (url.endsWith("/search/sheets") && method === "post") {
+      const { keyword, country, searchType } = payload as {
+        keyword: string;
+        country: string;
+        searchType: string;
+      };
+      const range = `${sheetName}!A:Z`;
+
+      const response = await sheets.spreadsheets.values.get({
+        spreadsheetId: SPREADSHEET_ID,
+        range,
+      });
+
+      const values = response.data.values;
+      if (!values) {
+        return { data: [] };
       }
 
-      // 4. Apply pagination if provided.
-      const current = params.pagination?.current || 1;
-      const pageSize = params.pagination?.pageSize || data.length;
-      const total = data.length;
-      const start = (current - 1) * pageSize;
-      const paginatedData = data.slice(start, start + pageSize) as unknown as TData[];
+      const headers = values[0];
+      const data = values.slice(1).map((row, index) => {
+        const rowData: Record<string, any> = {};
+        headers.forEach((header, i) => {
+          rowData[header] = row[i] || null;
+        });
+        // Use a consistent id, even if 'id' column is missing.
+        rowData.id = rowData.id || `row-${index + 2}`; // +2 because of header row and 1-based indexing
+        return rowData;
+      });
 
-      return { data: paginatedData, total };
-    } catch (error) {
-      console.error("Error in getList:", error);
-      return Promise.reject(error);
+      const filteredData = data.filter((item) => {
+        const countryMatches = item.country === country;
+
+        let keywordMatches = false;
+        if (searchType === 'name') {
+          keywordMatches = item.name?.toLowerCase().includes(keyword.toLowerCase());
+        } else if (searchType === 'idCard') {
+          keywordMatches = item.idCard?.toLowerCase().includes(keyword.toLowerCase());
+        } else if (searchType === 'phone') {
+          keywordMatches = item.phone?.toLowerCase().includes(keyword.toLowerCase());
+        }
+
+        return countryMatches && keywordMatches;
+      });
+
+      return { data: filteredData as TData[] };
     }
-  },
 
-  // The following methods are not implemented. Add implementations if needed.
-  getOne: async () => Promise.reject("Not implemented"),
-  create: async () => Promise.reject("Not implemented"),
-  update: async () => Promise.reject("Not implemented"),
-  updateMany: async () => Promise.reject("Not implemented"),
-  deleteOne: async () => Promise.reject("Not implemented"),
-  deleteMany: async () => Promise.reject("Not implemented"),
-  getApiUrl: () => {
-    throw new Error("Function not implemented.");
+    throw new Error(`Unsupported method ${method} or url ${url}`);
   },
+  getApiUrl: function (): string {
+    throw new Error("Function not implemented.");
+  }
 };
 
-export default googleSheetsDataProvider;
+export default dataProvider;
