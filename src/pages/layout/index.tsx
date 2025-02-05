@@ -1,7 +1,9 @@
+import React from "react";
 import { ThemedLayoutV2 } from "../../components/layout";
 import { ReactNode } from "react";
 import { ThemedHeaderV2 } from "../../components/layout/header";
 import { ThemedSiderV2 } from "../../components/layout/sider";
+
 
 export const Layout = ({ children }: { children: ReactNode }) => {
    return (
