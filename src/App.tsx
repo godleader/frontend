@@ -33,7 +33,7 @@ import {
   AccountList,
   AccountShow,
 } from "./pages/accounts";
-import SearchPage from "./pages/search";
+import { QueryInfoPage } from "./pages/search";
 import { WalletProvider } from "./contexts/wallet-context";
 
 import { WalletPage } from "./pages/wallet";
@@ -138,7 +138,7 @@ const App: React.FC = () => {
                       <Route path="show/:id" element={<AccountShow />} />
                       <Route path="edit/:id" element={<AccountEdit />} />
                     </Route>
-                    <Route path="search" element={<SearchPage />} />
+                    <Route path="search" element={<QueryInfoPage />} />
                 
                       <Route path="wallet" element={
                         <WalletProvider>
