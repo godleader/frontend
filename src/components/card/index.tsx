@@ -1,3 +1,4 @@
+import React from "react";
 import styles from "./index.module.css";
 
 import { motion } from "framer-motion";
