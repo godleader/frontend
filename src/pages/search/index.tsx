@@ -5,37 +5,50 @@ import {
   Button,
   Select,
   message,
+  Space,
   Card,
   Divider,
   Row,
   Col,
 } from 'antd';
-import { useApiUrl, useNavigation, useTranslate } from "@refinedev/core";
 import React from 'react';
-
 
 const { Option } = Select;
 
-export const QueryInfoPage = () => {
-  const [keyword, setKeyword] = useState('');
-  const [country, setCountry] = useState('my');
-  const [searchType, setSearchType] = useState('name');
-  const [dataSource, setDataSource] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [countryOptions, setCountryOptions] = useState<
-    { value: string; label: string }[]
-  >([]);
-  const apiUrl = useApiUrl();
-  const { push } = useNavigation();
-  const translate = useTranslate();
+// Constants
+const API_ENDPOINTS = {
+  COUNTRY_LIST: '/country-flag.json',
+  SEARCH: '/search/sheets',
+};
 
-  // Load country list from a local country-flag.json file
+interface CountryOption {
+  value: string;
+  label: string;
+}
+
+interface UserData {
+  id: string;
+  name: string;
+  idCard: string;
+  phone: string;
+  country: string;
+}
+
+export const QueryInfoPage = () => {
+  const [keyword, setKeyword] = useState<string>('');
+  const [country, setCountry] = useState<string>('my');
+  const [searchType, setSearchType] = useState<string>('name');
+  const [dataSource, setDataSource] = useState<UserData[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [countryOptions, setCountryOptions] = useState<CountryOption[]>([]);
+
+  // Fetch country list on component mount
   useEffect(() => {
     const fetchCountryOptions = async () => {
       try {
-        const response = await fetch('/country-flag.json');
+        const response = await fetch(API_ENDPOINTS.COUNTRY_LIST);
         if (!response.ok) {
-          throw new Error(translate('common.errors.network', 'Network response was not ok'));
+          throw new Error('Network response was not ok');
         }
         const data = await response.json();
         setCountryOptions(
@@ -45,110 +58,117 @@ export const QueryInfoPage = () => {
           }))
         );
       } catch (error) {
-        console.error('Error fetching country list:', error);
-        message.error(translate('common.errors.fetchCountry', 'Failed to fetch country list, please try again later.'));
+        console.error('Failed to fetch country list:', error);
+        message.error('Failed to fetch country list. Please try again later.');
       }
     };
 
     fetchCountryOptions();
-  }, [translate]);
+  }, []);
 
-
-    const columns = [
-        {
-            title: translate('fields.name', 'Name'),
-            dataIndex: 'name',
-            key: 'name',
-        },
-        {
-            title: translate('fields.idCard', 'ID Card Number'),
-            dataIndex: 'idCard',
-            key: 'idCard',
-        },
-        {
-            title: translate('fields.phone', 'Phone Number'),
-            dataIndex: 'phone',
-            key: 'phone',
-        },
-        {
-          title: translate('fields.country', 'Country/Region'),
-          dataIndex: 'country',
-          key: 'country',
-          render: (countryCode: string) => {
-            const found = countryOptions.find((option) => option.value === countryCode);
-            return found ? found.label : countryCode;
-          },
-        },
-    ];
-
-
-
+  // Handle search
   const handleSearch = async () => {
     if (!keyword.trim()) {
-      message.warning(translate('common.errors.emptyKeyword', 'Please enter a search keyword'));
+      message.warning('Please enter a search keyword');
       return;
     }
 
     setLoading(true);
     try {
+      const token = sessionStorage.getItem('token');
+      if (!token) {
+        message.error('No login information detected. Please log in again.');
+        setLoading(false);
+        return;
+      }
 
-      const response = await fetch(`${apiUrl}/search/sheets`, {  // Use apiUrl
+      const response = await fetch(API_ENDPOINTS.SEARCH, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${sessionStorage.getItem('token')}`, // Or use refine's auth helpers
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ keyword, country, searchType }),
       });
 
       if (!response.ok) {
-        switch (response.status) {
-          case 401:
-            message.error(translate('common.errors.unauthorized', 'Your session has expired, please log in again.'));
-            // Optionally redirect to login page here using refine's navigation
-            push('/login'); // Redirect to the login route
-            break;
-          case 403:
-            message.error(translate('common.errors.forbidden', 'You do not have permission to access this resource.'));
-            break;
-          case 404:
-            message.error(translate('common.errors.notFound', 'Resource not found.'));
-            break;
-          case 405:
-            message.error(translate('common.errors.methodNotAllowed', "Method Not Allowed. Check your API endpoint's allowed methods."));
-            break;
-          default:
-            message.error(translate('common.errors.searchFailed', {status: response.status}, `Search failed, please try again later. (Status code: ${response.status})`));
-        }
-        throw new Error(`HTTP error! Status: ${response.status}`); // Still throw for the catch block
+        handleResponseError(response.status);
+        throw new Error(`HTTP error: ${response.status}`);
       }
 
       const data = await response.json();
       setDataSource(data);
-      message.success(translate('common.messages.searchSuccess', 'Search successful!'));
-
+      message.success('Search successful!');
     } catch (error) {
-      console.error("An error occurred during the search:", error);
-      message.error(translate('common.errors.searchError', 'An error occurred during the search, please try again later.'));
+      console.error('Error during search:', error);
+      message.error('An error occurred during the search. Please try again later.');
     } finally {
       setLoading(false);
     }
   };
 
+  // Handle response errors
+  const handleResponseError = (status: number) => {
+    switch (status) {
+      case 401:
+        message.error('Your session has expired. Please log in again.');
+        break;
+      case 403:
+        message.error('You do not have permission to access this resource.');
+        break;
+      case 404:
+        message.error('The requested resource was not found.');
+        break;
+      case 405:
+        message.error('Invalid request method. Please contact support.');
+        break;
+      default:
+        message.error(`Search failed. Please try again later. (Status: ${status})`);
+    }
+  };
 
+  // Table columns
+  const columns = [
+    {
+      title: 'Name',
+      dataIndex: 'name',
+      key: 'name',
+    },
+    {
+      title: 'ID Card',
+      dataIndex: 'idCard',
+      key: 'idCard',
+    },
+    {
+      title: 'Phone',
+      dataIndex: 'phone',
+      key: 'phone',
+    },
+    {
+      title: 'Country',
+      dataIndex: 'country',
+      key: 'country',
+      render: (countryCode: string) => {
+        const found = countryOptions.find((option) => option.value === countryCode);
+        return found ? found.label : countryCode;
+      },
+    },
+  ];
+
+  // Search type options
   const searchTypeOptions = [
-    { value: 'name', label: translate('fields.name', 'Name') },
-    { value: 'idCard', label: translate('fields.idCard', 'ID Card Number') },
-    { value: 'phone', label: translate('fields.phone', 'Phone Number') },
+    { value: 'name', label: 'Name' },
+    { value: 'idCard', label: 'ID Card' },
+    { value: 'phone', label: 'Phone' },
   ];
 
   return (
     <div style={{ padding: '20px' }}>
-      <Card title={translate('pages.userSearch.title', 'User Search')}>
+      <Card title="User Search">
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={8} md={6}>
             <Select
-              placeholder={translate('placeholders.selectCountry', "Select Country/Region")}
+              placeholder="Select Country"
               value={country}
               onChange={(value) => setCountry(value)}
               style={{ width: '100%' }}
@@ -162,7 +182,7 @@ export const QueryInfoPage = () => {
           </Col>
           <Col xs={24} sm={8} md={6}>
             <Select
-              placeholder={translate('placeholders.selectSearchType', "Select Search Type")}
+              placeholder="Select Search Type"
               value={searchType}
               onChange={(value) => setSearchType(value)}
               style={{ width: '100%' }}
@@ -176,7 +196,7 @@ export const QueryInfoPage = () => {
           </Col>
           <Col xs={24} sm={8} md={12}>
             <Input.Search
-              placeholder={translate('placeholders.enterKeyword', "Enter search keyword")}
+              placeholder="Enter search keyword"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               onSearch={handleSearch}
@@ -185,7 +205,13 @@ export const QueryInfoPage = () => {
             />
           </Col>
         </Row>
-
+        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
+          <Col xs={24}>
+            <Button type="primary" onClick={handleSearch} loading={loading} block>
+              Search
+            </Button>
+          </Col>
+        </Row>
         <Divider />
         <Table dataSource={dataSource} columns={columns} loading={loading} rowKey="id" />
       </Card>
