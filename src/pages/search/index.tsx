@@ -1,62 +1,66 @@
-import React, { useState } from "react";
-import { useMany } from "@refinedev/core";
-import { motion, AnimatePresence } from "framer-motion";
+import type { ReactElement } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
-import { Filter } from "../../components/filter";
-import { Search } from "../../components/search";
-import { Card } from "../../components/card";
+export const SearchPage = (): ReactElement => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const query = new URLSearchParams(location.search).get('q') as string;
+  const sessionIdQuery = new URLSearchParams(location.search).get('id') as string;
+  const [data, setData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [queryKey, setQueryKey] = useState<string>('');
 
-import styles from "./index.module.css";
+  const fetchData = async (id: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/search?id=${id}`);
+      const result = await response.json();
+      setData(result);
+      setQueryKey(id);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-export const SearchPage = () => {
-  const [inputValue, setInputValue] = useState("");
-  const [activeFilter, setActiveFilter] = useState("");
+  useEffect(() => {
+    if (sessionIdQuery) {
+      fetchData(sessionIdQuery);
+    }
+  }, [sessionIdQuery]);
 
-  const posts = useMany<{
-    id: number;
-    title: string;
-    status: string;
-  }>({
-    resource: "posts",
-    ids: Array.from(Array(8).keys()).slice(1),
-  }).data?.data;
+  useEffect(() => {
+    if (query && !sessionIdQuery) {
+      fetchData(query);
+    }
+  }, [query, sessionIdQuery]);
 
-  const filters: string[] = ["published", "draft", "rejected"];
+  const chunk = data?.chunks?.[0] || null;
+  const content = chunk?.response || '';
+
+  const searchedQuery = data?.chunks?.[0]?.prompt || query;
 
   return (
-    <motion.div>
-      <div className={styles.filters}>
-        {filters.map((filter, index) => {
-          return (
-            <Filter
-              key={index}
-              title={filter}
-              isActive={filter === activeFilter}
-              onClick={(e: React.MouseEvent) => {
-                const el = e.target as HTMLElement;
-                el.textContent?.toLowerCase() !== activeFilter
-                  ? setActiveFilter(filter)
-                  : setActiveFilter("");
-              }}
-            />
-          );
-        })}
-      </div>
-      <Search
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-          setInputValue(e.target.value);
-        }}
-      />
-      <AnimatePresence>
-        {posts
-          ?.filter((el) =>
-            el.title.toLowerCase().includes(inputValue.toLowerCase()),
-          )
-          .filter((e) => e.status.includes(activeFilter))
-          .map((post: { title: string; status: string }, index: number) => {
-            return <Card key={index} title={post.title} status={post.status} />;
-          })}
-      </AnimatePresence>
-    </motion.div>
+    <div>
+      {(!!content || !!data) && (
+        <div className="flex flex-col justify-center">
+          <div>
+            {/* Render search results here */}
+            <div>{content}</div>
+          </div>
+          <button
+            className="order-4 mx-auto mt-5 laptop:ml-0"
+            onClick={() => {
+              console.log('Switching search provider');
+            }}
+          >
+            <span>Search posts on daily.dev instead</span>
+          </button>
+        </div>
+      )}
+    </div>
   );
 };
+
