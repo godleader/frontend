@@ -1,4 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+
+import { ThemedLayoutV2 } from "../../components/layout";
+import { ReactNode } from "react";
+import { ThemedHeaderV2 } from "../../components/layout/header";
+import { ThemedSiderV2 } from "../../components/layout/sider";
 import { CrudFilter, useTable } from '@refinedev/core';
 import { Table, Form, Input, Select, Button, Spin } from 'antd';
 import { debounce } from 'lodash'; // 需要安裝 lodash
@@ -16,6 +21,9 @@ interface SearchParams {
     searchType?: string;
     keyword?: string;
 }
+
+
+
 
 // Helper function to create filters
 const buildFilters = (params: SearchParams): CrudFilter[] => {
@@ -84,6 +92,11 @@ export const QueryInfoPage: React.FC = () => {
     }, 300), []);
 
     return (
+
+      <ThemedLayoutV2
+      Header={() => <ThemedHeaderV2 sticky />}
+      Sider={() => <ThemedSiderV2 fixed />}
+   >
         <div style={{ padding: '20px' }}>
             {error && <div style={{ color: 'red' }}>{error}</div>}
             <Form
@@ -141,5 +154,7 @@ export const QueryInfoPage: React.FC = () => {
                 )}
             </Spin>
         </div>
+
+           </ThemedLayoutV2>
     );
 };
