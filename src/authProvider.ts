@@ -1,7 +1,7 @@
 import { AuthProvider } from "@refinedev/core";
 
 
-export const TOKEN_KEY = "token";
+export const TOKEN_KEY = 'token';
 
 const backend = import.meta.env.VITE_BACKEND_SERVER
 
