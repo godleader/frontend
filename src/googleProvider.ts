@@ -1,4 +1,7 @@
 export class googleProvider {
+  static getList(arg0: { resource: string; filters: { field: string; operator: string; value: string; }[]; pagination: { pageSize: number; }; }) {
+    throw new Error('Method not implemented.');
+  }
   constructor() {
     // Removed assignment to fix the type error
   }
