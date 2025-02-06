@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import  { useContext, useEffect, useState } from "react";
 import type { RefineThemedLayoutV2HeaderProps } from "@refinedev/antd";
 import { useGetIdentity, useActiveAuthProvider } from "@refinedev/core";
 import {
@@ -12,7 +12,7 @@ import {
   message,
   Spin,
 } from "antd";
-import { ColorModeContext } from "../../contexts/color-mode";
+import { ColorModeContext, ColorModeContextType } from "../../contexts/color-mode";
 import { useResponsive } from "antd-style";
 import { WalletContext } from "../../contexts/wallet-context";
 
@@ -26,7 +26,7 @@ type IUser = {
   avatar: string;
 };
 
-export const ThemedHeaderV2: React.FC<RefineThemedLayoutV2HeaderProps> = ({
+export const ThemedHeaderV2: React.FC<{ isSticky?: boolean; sticky?: boolean; }> = ({
   sticky,
 }) => {
   const { token } = useToken();
@@ -34,7 +34,7 @@ export const ThemedHeaderV2: React.FC<RefineThemedLayoutV2HeaderProps> = ({
   const { data: user } = useGetIdentity({
     v3LegacyAuthProviderCompatible: Boolean(authProvider?.isLegacy),
   });
-  const { mode, toggleMode } = useContext(ColorModeContext);
+  const { mode, toggleMode } = useContext<ColorModeContextType>(ColorModeContext);
   const responsive = useResponsive();
   // Assume "xs" true means we are on a mobile device
   const isMobile = responsive.xs;
@@ -46,7 +46,7 @@ export const ThemedHeaderV2: React.FC<RefineThemedLayoutV2HeaderProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const shouldRenderHeader = user && (user.name || user.avatar);
+  const shouldRenderHeader = user && (user.name || user.avatar || user.walletBalance);
 
   // Fetch wallet balance from the backend
   useEffect(() => {
@@ -80,7 +80,7 @@ export const ThemedHeaderV2: React.FC<RefineThemedLayoutV2HeaderProps> = ({
   // Dynamically update menu items with fetched data
   const menuItems = [
     { key: "username", label: `Username: ${user?.name || "N/A"}` },
-    { key: "balance", label: `Balance: ${walletBalance}` },
+    { key: "walletBalance", label: `Balance: ${user?.walletBalance}` },
     { key: "history", label: "History Search" },
   ];
 

@@ -11,16 +11,17 @@ import {
   Row,
   Col,
 } from 'antd';
-import React from 'react';
+import * as React from 'react';
 
 const { Option } = Select;
 
-// Constants
+// API endpoint constants
 const API_ENDPOINTS = {
-  COUNTRY_LIST: '/country-flag.json',
-  SEARCH: '/search/sheets',
+  COUNTRY_LIST: '/api/countries',  // Updated to RESTful API endpoint
+  SEARCH: '/search/sheets',  // Updated to RESTful API endpoint
 };
 
+// Type definitions for the data structure
 interface CountryOption {
   value: string;
   label: string;
@@ -34,7 +35,7 @@ interface UserData {
   country: string;
 }
 
-export const QueryInfoPage = () => {
+export const QueryInfoPage: React.FC = () => {
   const [keyword, setKeyword] = useState<string>('');
   const [country, setCountry] = useState<string>('my');
   const [searchType, setSearchType] = useState<string>('name');
@@ -42,13 +43,13 @@ export const QueryInfoPage = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [countryOptions, setCountryOptions] = useState<CountryOption[]>([]);
 
-  // Fetch country list on component mount
+  // Fetch country list on component mount from the REST API
   useEffect(() => {
     const fetchCountryOptions = async () => {
       try {
-        const response = await fetch(API_ENDPOINTS.COUNTRY_LIST);
+        const response = await fetch('https://raw.githubusercontent.com/MYavuz25/CountryListWithFlag/refs/heads/main/CountryList.json');
         if (!response.ok) {
-          throw new Error('Network response was not ok');
+          throw new Error('Failed to fetch country list');
         }
         const data = await response.json();
         setCountryOptions(
@@ -66,7 +67,7 @@ export const QueryInfoPage = () => {
     fetchCountryOptions();
   }, []);
 
-  // Handle search
+  // Handle search through REST API
   const handleSearch = async () => {
     if (!keyword.trim()) {
       message.warning('Please enter a search keyword');
@@ -74,6 +75,7 @@ export const QueryInfoPage = () => {
     }
 
     setLoading(true);
+    
     try {
       const token = sessionStorage.getItem('token');
       if (!token) {
@@ -170,7 +172,7 @@ export const QueryInfoPage = () => {
             <Select
               placeholder="Select Country"
               value={country}
-              onChange={(value) => setCountry(value)}
+              onChange={(value: string) => setCountry(value)}
               style={{ width: '100%' }}
             >
               {countryOptions.map((option) => (
@@ -184,7 +186,7 @@ export const QueryInfoPage = () => {
             <Select
               placeholder="Select Search Type"
               value={searchType}
-              onChange={(value) => setSearchType(value)}
+              onChange={(value: string) => setSearchType(value)}
               style={{ width: '100%' }}
             >
               {searchTypeOptions.map((option) => (
@@ -207,7 +209,7 @@ export const QueryInfoPage = () => {
         </Row>
         <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
           <Col xs={24}>
-            <Button type="primary" onClick={handleSearch} loading={loading} block>
+            <Button type="primary" loading={loading} block onClick={handleSearch}>
               Search
             </Button>
           </Col>

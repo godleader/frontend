@@ -104,7 +104,7 @@ const App: React.FC = () => {
                     edit: "/accounts/edit/:id",
                     meta: { canDelete: true },
                   },
-                  { name: "search", list: "/search" },
+                  { name: "search", list: "/QueryInfoPage" },
                   { name: "wallet", list: "/wallet" },
                 ]}
                 options={{
