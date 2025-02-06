@@ -89,7 +89,7 @@ export const SearchComponent = () => {
         return;
       }
 
-      const response = await fetch('/api/users/search', {
+      const response = await fetch('/search/sheets', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
