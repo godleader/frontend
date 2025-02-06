@@ -138,7 +138,7 @@ const App: React.FC = () => {
                       <Route path="show/:id" element={<AccountShow />} />
                       <Route path="edit/:id" element={<AccountEdit />} />
                     </Route>
-                    <Route path="search" element={<QueryInfoPage />} />
+                    <Route path="search" element={<SearchBar />} />
                 
                       <Route path="wallet" element={
                         <WalletProvider>
