@@ -33,7 +33,7 @@ import {
   AccountList,
   AccountShow,
 } from "./pages/accounts";
-import { QueryInfoPage } from "./pages/search";
+import { SearchBar } from "./pages/search";
 import { WalletProvider } from "./contexts/wallet-context";
 
 import { WalletPage } from "./pages/wallet";
