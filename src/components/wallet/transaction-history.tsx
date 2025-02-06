@@ -1,7 +1,15 @@
 import React, { useContext } from "react";
 import { Table } from "antd";
 import { WalletContext } from "../../contexts/wallet-context";
-import { Transaction } from "../../types";
+
+// Define the Transaction interface directly here as it's no longer imported from types
+interface Transaction {
+  id: number;
+  type: "deposit" | "withdrawal";
+  amount: number;
+  date: string;
+  status: "completed" | "pending" | "failed"; // Example statuses, adjust as needed
+}
 
 const columns = [
   {
