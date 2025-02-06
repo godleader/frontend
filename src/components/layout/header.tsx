@@ -15,6 +15,7 @@ import {
 import { ColorModeContext, ColorModeContextType } from "../../contexts/color-mode";
 import { useResponsive } from "antd-style";
 import { WalletContext } from "../../contexts/wallet-context";
+import React from "react";
 
 const { Text } = Typography;
 const { useToken } = theme;

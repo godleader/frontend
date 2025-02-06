@@ -33,9 +33,8 @@ import {
   AccountList,
   AccountShow,
 } from "./pages/accounts";
-import { HackerNewsStoriesWithSearch } from "./pages/search"; // Import SearchBar
 import { WalletProvider } from "./contexts/wallet-context"; // Import WalletProvider
-
+import { SearchPage } from "./pages/search";
 import { WalletPage } from "./pages/wallet";
 import { Layout } from "./pages/layout";
 
@@ -137,7 +136,7 @@ const App: React.FC = () => {
                       <Route path="show/:id" element={<AccountShow />} />
                       <Route path="edit/:id" element={<AccountEdit />} />
                     </Route>
-                    <Route path="search" element={<HackerNewsStoriesWithSearch />} /> {/* Route for SearchBar */}
+                    <Route path="search" element={<SearchPage />} /> {/* Route for SearchBar */}
 
                     <Route
                       path="wallet"

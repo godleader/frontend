@@ -1,44 +1,16 @@
-import { useState, useEffect } from 'react';
-import HackerNewsStories from './hackernews';
+import React from 'react';
+import { useTitle } from '@refinedev/core';
+import { SearchComponent } from '../../components/search';
 
-export const HackerNewsStoriesWithSearch = () => {
-  const [stories, setStories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export const SearchPage = () => {
 
-  const fetchStories = async () => {
-    try {
-      const data = await (await fetch('https://hn.algolia.com/api/v1/search_by_date?tags=front_page&hitsPerPage=20')).json();
-      setStories(
-        data.hits.sort((story: { points: number; }, nextStory: { points: number; }) => (story.points < nextStory.points ? 1 : -1))
-      );
-      setError(null);
-    } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError(String(err));
-      }
-      setStories([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStories();
-  }, []);
+  useTitle();
 
   return (
-    <> { /* React fragment */}
-    <div className="wrapper">
-      <h2>Latest HN Stories</h2>
-      {loading && <div>HackerNews frontpage stories loading...</div>}
-      {error && <div>{`Problem fetching the HackeNews Stories - ${error}`}</div>}      
-      <HackerNewsStories stories={stories} />
+    <div>
+      <h1 style={{ textAlign: 'center', marginBottom: '24px' }}>Search Page</h1>
+      <SearchComponent />
     </div>
-    </>
-  )
-}
+  );
+};
 
-export default HackerNewsStoriesWithSearch;

@@ -1,3 +1,4 @@
+import React from "react";
 import { AuthPage } from "../../components/pages/auth";
 
 export const Login = () => {
