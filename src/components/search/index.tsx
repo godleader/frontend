@@ -9,6 +9,7 @@ import {
   Divider,
   Row,
   Col,
+  Typography,
 } from 'antd';
 
 import { SearchResultTable } from './SearchResultTable';
@@ -130,59 +131,69 @@ export const SearchComponent = () => {
 
   return (
     <div style={{ padding: '20px' }}>
-      <Card title="用户搜索">
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={8} md={6}>
-            <Select
-              placeholder="请选择国家/地区"
-              value={country}
-              onChange={(value) => setCountry(value)}
-              style={{ width: '100%' }}
-            >
-              {countryOptions.map((option) => (
-                <Option key={option.value} value={option.value}>
-                  {option.label}
-                </Option>
-              ))}
-            </Select>
-          </Col>
-          <Col xs={24} sm={8} md={6}>
-            <Select
-              placeholder="请选择搜索类型"
-              value={searchType}
-              onChange={(value) => setSearchType(value)}
-              style={{ width: '100%' }}
-            >
-              {searchTypeOptions.map((option) => (
-                <Option key={option.value} value={option.value}>
-                  {option.label}
-                </Option>
-              ))}
-            </Select>
-          </Col>
-          <Col xs={24} sm={8} md={12}>
-            <Input.Search
-              placeholder="请输入搜索关键词"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-              onSearch={handleSearch}
-              enterButton
-              style={{ width: '100%' }}
-            />
-          </Col>
-        </Row>
-        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-          <Col xs={24}>
-            <Button type="primary" onClick={handleSearch} loading={loading} block>
-              搜索
-            </Button>
-          </Col>
-        </Row>
-        <Divider />
-        {/* Display the search results in the table.
-            The `rowKey` prop is set to the index for uniqueness. */}
-          <SearchResultTable data={dataSource} loading={loading} />
-      </Card>
-    </div>
-  );
+    <Card title="用户搜索">
+      <Row gutter={[16, 16]} align="middle">
+        {/* Country Selection */}
+        <Col xs={24} sm={6} md={5}>
+          <Select
+            placeholder="请选择国家/地区"
+            value={country}
+            onChange={(value) => setCountry(value)}
+            style={{ width: '100%' }}
+          >
+            {countryOptions.map((option) => (
+              <Option key={option.value} value={option.value}>
+                {option.label}
+              </Option>
+            ))}
+          </Select>
+        </Col>
+
+        {/* Search Type Selection */}
+        <Col xs={24} sm={6} md={5}>
+          <Select
+            placeholder="请选择搜索类型"
+            value={searchType}
+            onChange={(value) => setSearchType(value)}
+            style={{ width: '100%' }}
+          >
+            {searchTypeOptions.map((option) => (
+              <Option key={option.value} value={option.value}>
+                {option.label}
+              </Option>
+            ))}
+          </Select>
+        </Col>
+
+        {/* Keyword Input - Replaced Input.Search with Input */}
+        <Col xs={24} sm={12} md={8}>
+          <Input
+            placeholder="请输入搜索关键词"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            style={{ width: '100%' }}
+          />
+        </Col>
+      </Row>
+
+      {/* Search Button - Made Smaller */}
+      <Row gutter={[16, 16]} style={{ marginTop: 16 }} justify="center">
+        <Col xs={12} sm={6} md={4}>
+          <Button type="primary" onClick={handleSearch} loading={loading} block>
+            搜索
+          </Button>
+        </Col>
+      </Row>
+
+      {/* Note Below the Button */}
+      <Row justify="center" style={{ marginTop: 8 }}>
+          <Typography.Text type="secondary">每次成功搜索将扣除 1</Typography.Text>
+      </Row>
+
+      <Divider />
+      {/* Display search results */}
+      <SearchResultTable data={dataSource} loading={loading} />
+    </Card>
+  </div>
+);
 };
