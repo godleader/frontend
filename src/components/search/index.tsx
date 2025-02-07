@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Table,
   Input,
@@ -10,7 +10,6 @@ import {
   Row,
   Col,
 } from 'antd';
-import React from 'react';
 
 const { Option } = Select;
 
@@ -18,7 +17,7 @@ export const SearchComponent = () => {
   const [keyword, setKeyword] = useState('');
   const [country, setCountry] = useState('my');
   const [searchType, setSearchType] = useState('name');
-  const [dataSource, setDataSource] = useState([]);
+  const [dataSource, setDataSource] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [countryOptions, setCountryOptions] = useState<
     { value: string; label: string }[]
@@ -49,6 +48,7 @@ export const SearchComponent = () => {
     fetchCountryOptions();
   }, []);
 
+  // Define the columns for the table.
   const columns = [
     {
       title: '姓名',
@@ -69,7 +69,7 @@ export const SearchComponent = () => {
       title: '国家/地区',
       dataIndex: 'country',
       key: 'country',
-      // Look up the country label using the country code stored in the record
+      // Render the country label based on the country code
       render: (countryCode: string) => {
         const found = countryOptions.find(
           (option) => option.value === countryCode
@@ -88,7 +88,8 @@ export const SearchComponent = () => {
         return;
       }
 
-      // 修改这里的 URL，如果你的后端路由定义为 '/search' 而不是 '/search/sheets'
+      // Call the backend API.
+      // Adjust the URL if your backend route is different.
       const response = await fetch('https://server-ecru-phi.vercel.app/search/sheets', {
         method: 'POST',
         headers: {
@@ -107,8 +108,10 @@ export const SearchComponent = () => {
         throw new Error(`HTTP 错误: ${response.status}`);
       }
 
-      const data = await response.json();
-      setDataSource(data);
+      // Expecting the response format to be { data: [...] }
+      const result = await response.json();
+      const results = result.data || result;
+      setDataSource(results);
     } catch (error: any) {
       message.error('搜索用户失败，请稍后重试。');
     } finally {
@@ -116,6 +119,7 @@ export const SearchComponent = () => {
     }
   };
 
+  // Options for the search type
   const searchTypeOptions = [
     { value: 'name', label: '姓名' },
     { value: 'idCard', label: '身份证号' },
@@ -173,7 +177,15 @@ export const SearchComponent = () => {
           </Col>
         </Row>
         <Divider />
-        <Table dataSource={dataSource} columns={columns} loading={loading} />
+        {/* Display the search results in the table.
+            The `rowKey` prop is set to the index for uniqueness. */}
+        <Table
+          rowKey={(record, index) => index as number}
+          dataSource={dataSource}
+          columns={columns}
+          loading={loading}
+          pagination={{ pageSize: 10 }}
+        />
       </Card>
     </div>
   );
