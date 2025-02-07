@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTitle } from '@refinedev/core';
 import { SearchComponent } from '../../components/search';
+import { Typography } from 'antd';
 
 export const SearchPage = () => {
 
@@ -8,7 +9,7 @@ export const SearchPage = () => {
 
   return (
     <div>
-      <h1 style={{ textAlign: 'center', marginBottom: '24px' }}>Search Page</h1>
+
       <SearchComponent />
     </div>
   );

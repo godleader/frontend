@@ -131,9 +131,6 @@ export const SearchComponent = () => {
 
   return (
     <div style={{ padding: '20px' }}>
-      <Typography.Title level={2} style={{ textAlign: 'center', fontSize: '24px' }}>
-        Search Page
-      </Typography.Title>
     <Card title="用户搜索">
      
       <Row gutter={[16, 16]} justify="center">
