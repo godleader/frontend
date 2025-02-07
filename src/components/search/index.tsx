@@ -178,8 +178,8 @@ export const SearchComponent = () => {
 
       {/* Search Button - Made Smaller */}
       <Row gutter={[16, 16]} style={{ marginTop: 16 }} justify="center">
-        <Col xs={12} sm={6} md={4}>
-          <Button type="primary" onClick={handleSearch} loading={loading} block>
+          <Col xs={16} sm={8} md={6}>
+          <Button color="purple" variant="outlined" onClick={handleSearch} loading={loading} block>
             搜索
           </Button>
         </Col>
