@@ -60,8 +60,8 @@ export const SearchResultTable: React.FC<DataResultTableProps> = ({ data, loadin
     return (
       <Result
         status="info"
-        title="没有找到数据"
-        subTitle="请尝试其他搜索条件。"
+        title="请进行搜索"
+        subTitle="每次成功搜索将扣除 1，请确保您的搜索关键词准确。"
       />
     );
   }
