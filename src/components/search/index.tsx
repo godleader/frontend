@@ -5,7 +5,6 @@ import {
   Button,
   Select,
   message,
-  Space,
   Card,
   Divider,
   Row,
@@ -89,6 +88,7 @@ export const SearchComponent = () => {
         return;
       }
 
+      // 修改这里的 URL，如果你的后端路由定义为 '/search' 而不是 '/search/sheets'
       const response = await fetch('/search/sheets', {
         method: 'POST',
         headers: {
@@ -125,7 +125,6 @@ export const SearchComponent = () => {
   return (
     <div style={{ padding: '20px' }}>
       <Card title="用户搜索">
-        {/* Use the Grid system for a responsive layout */}
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={8} md={6}>
             <Select
