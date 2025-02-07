@@ -28,7 +28,7 @@ export const AccountList: React.FC<IResourceComponentsProps> = () => {
                     // render={(value: string) => <EmailField value={value} />}
                     width="100%"
                 />
-                <Table.Column dataIndex="password" title="Password" />
+            
                 <Table.Column dataIndex="role" title="Role" />
                 <Table.Column dataIndex="walletBalance" title="Wallet Balance" />
                 <Table.Column

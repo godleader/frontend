@@ -7,7 +7,7 @@ export const Login = () => {
       type="login"
       title={<img src={"./square.png"} width={290} alt="zeal-logo" />}
       formProps={{
-        initialValues: { email: "admin@admin.com", password: "admin123" },
+        initialValues: { email: "", password: "" },
       }}
       rememberMe={false}
       forgotPasswordLink={false}
