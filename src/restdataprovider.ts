@@ -6,7 +6,7 @@ import { stringify } from "query-string";
 type MethodTypes = "get" | "delete" | "head" | "options";
 type MethodTypesWithBody = "post" | "put" | "patch";
 
-const dataProvider = (
+export const dataProvider = (
   apiUrl: string,
   httpClient: AxiosInstance = axiosInstance
 ): Omit<Required<DataProvider>, "createMany" | "updateMany" | "deleteMany"> => ({
@@ -170,5 +170,3 @@ const dataProvider = (
     return Promise.resolve({ data });
   },
 });
-
-export default dataProvider;

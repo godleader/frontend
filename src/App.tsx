@@ -35,7 +35,7 @@ import {
 } from "./pages/accounts";
 import { WalletProvider } from "./contexts/wallet-context"; // Import WalletProvider
 import { SearchPage } from "./pages/search";
-import { WalletPage } from "./pages/wallet";
+import { WalletPage } from "./pages/wallet/index2";
 import { Layout } from "./pages/layout";
 
 // Backend endpoint from environment variable (if you have one)

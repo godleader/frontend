@@ -14,7 +14,7 @@ import {
   containerStyles,
   layoutStyles,
   titleStyles,
-  styles, // Import the new unified styles object
+  styles,
 } from "./styles";
 import {
   Row,
