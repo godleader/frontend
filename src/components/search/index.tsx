@@ -11,7 +11,7 @@ import {
   Col,
 } from 'antd';
 
-import SearchResultTable from './SearchResultTable';
+import { SearchResultTable } from './SearchResultTable';
 
 const { Option } = Select;
 
