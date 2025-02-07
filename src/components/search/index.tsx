@@ -11,6 +11,8 @@ import {
   Col,
 } from 'antd';
 
+import SearchResultTable from './SearchResultTable';
+
 const { Option } = Select;
 
 export const SearchComponent = () => {
@@ -179,13 +181,7 @@ export const SearchComponent = () => {
         <Divider />
         {/* Display the search results in the table.
             The `rowKey` prop is set to the index for uniqueness. */}
-        <Table
-          rowKey={(record, index) => index as number}
-          dataSource={dataSource}
-          columns={columns}
-          loading={loading}
-          pagination={{ pageSize: 10 }}
-        />
+          <SearchResultTable data={dataSource} loading={loading} />
       </Card>
     </div>
   );
