@@ -89,7 +89,7 @@ export const SearchComponent = () => {
       }
 
       // 修改这里的 URL，如果你的后端路由定义为 '/search' 而不是 '/search/sheets'
-      const response = await fetch('/search/sheets', {
+      const response = await fetch('https://server-ecru-phi.vercel.app/search/sheets', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
