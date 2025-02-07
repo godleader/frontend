@@ -81,7 +81,7 @@ export const ThemedHeaderV2: React.FC<{ isSticky?: boolean; sticky?: boolean; }>
   // Dynamically update menu items with fetched data
   const menuItems = [
     { key: "username", label: `Username: ${user?.name || "N/A"}` },
-    { key: "walletBalance", label: `Balance: ${user?.walletBalance}` },
+    { key: "walletBalance", label: `Balance: ${walletBalance}` },
     { key: "history", label: "History Search" },
   ];
 
