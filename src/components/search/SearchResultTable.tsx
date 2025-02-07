@@ -1,6 +1,6 @@
-// SearchResultTable.tsx
+// DataResultTable.tsx
 import React from 'react';
-import { Table } from 'antd';
+import { Table, Result } from 'antd';
 import type { TableProps } from 'antd';
 
 interface SearchResult {
@@ -8,7 +8,7 @@ interface SearchResult {
   name: string;
   phone: string;
   idCard: string;
-  country: string;
+  address: string;
 }
 
 const columns: TableProps<SearchResult>['columns'] = [
@@ -29,24 +29,48 @@ const columns: TableProps<SearchResult>['columns'] = [
     key: 'idCard',
   },
   {
-    title: '国家/地区',
-    dataIndex: 'country',
-    key: 'country',
+    title: '地址',
+    dataIndex: 'address',
+    key: 'address',
   },
 ];
 
-interface SearchResultTableProps {
-  data: SearchResult[];
+interface DataResultTableProps {
+  data: any[]; // The data is an array of arrays from the backend.
   loading?: boolean;
 }
 
-export const SearchResultTable: React.FC<SearchResultTableProps> = ({ data, loading = false }) => {
+export const SearchResultTable: React.FC<DataResultTableProps> = ({ data, loading = false }) => {
+  // Transform the backend data (array of arrays) into an array of objects.
+  // Here we assume:
+  //   row[0] -> 姓名 (name)
+  //   row[1] -> 电话号码 (phone)
+  //   row[2] -> 身份证号 (idCard) -- may be missing, so default to empty string
+  //   row[3] -> 地址 (address) -- may be missing, so default to empty string
+  const formattedData: SearchResult[] = data.map((row, index) => ({
+    key: index.toString(),
+    name: row[0] || '',
+    phone: row[1] || '',
+    idCard: row[2] || '',
+    address: row[3] || '',
+  }));
+
+  // If not loading and there's no data, display a friendly Result.
+  if (!loading && formattedData.length === 0) {
+    return (
+      <Result
+        status="info"
+        title="没有找到数据"
+        subTitle="请尝试其他搜索条件。"
+      />
+    );
+  }
+
   return (
     <Table<SearchResult>
       columns={columns}
-      dataSource={data}
+      dataSource={formattedData}
       loading={loading}
-      rowKey={(record) => record.key}
       pagination={{ pageSize: 10 }}
     />
   );
